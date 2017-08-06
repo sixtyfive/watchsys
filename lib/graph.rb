@@ -43,8 +43,6 @@ def write_graph_recent
 end
 
 def write_graph_today
-  logger.info "writing graph for today"
-
   g = Gruff::Area.new($resolution)
   g.title = 'Seit heute morgen um drei'
 
@@ -52,8 +50,15 @@ def write_graph_today
   g.legend_font_size = 10
 
   tc = Time.now
-  t1 = Time.new(tc.year, tc.month, tc.day, 3)
-  t2 = Time.new(tc.year, tc.month, tc.day + 1, 3)
+  if tc.hour >= 0 && tc.hour < 3
+    day = tc.day - 1
+  else
+    day = tc.day
+  end
+  t1 = Time.new(tc.year, tc.month, day, 3)
+  t2 = Time.new(tc.year, tc.month, day + 1, 3)
+
+  logger.info "writing graph for today (#{t1} - #{t2})"
 
   records = Minute.select(:temp, 
                           Sequel.+(:cpu_usage_usr, :cpu_usage_sys).as(:cpu), 
@@ -68,6 +73,14 @@ def write_graph_today
     acc[:pps]  << data[:pps]  / 2    # make it look smaller than bps
   }
 
+  if records[:cpu] && records[:cpu].count < 60 * 24
+    keys = [:temp, :cpu, :kbps, :pps]
+    keys.each {|key| records[key] << 3000}
+    (60 * 24 - records[:cpu].count).times do
+      keys.each {|key| records[key] << 0}
+    end
+  end
+  
   records.each {|name, data_points|
     g.data name, data_points
   }
