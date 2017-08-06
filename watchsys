@@ -1,0 +1,82 @@
+#!/usr/bin/env ruby
+
+require 'rb-inotify'
+require 'csv'
+require 'logger'
+
+def logger
+  @logger ||= Logger.new($stdout)
+  @logger.level = ARGV.include?('-v') ? Logger::DEBUG : Logger::INFO
+  ARGV.include?('-q') ? Logger.new('/dev/null') : @logger
+end
+
+require_relative 'lib/string'
+require_relative 'lib/models'
+require_relative 'lib/aggregate'
+require_relative 'lib/graph'
+
+def import_into_database(single_row = '')
+  CSV.parse(single_row) do |row|
+    begin
+      epoch = Float(row[0]).to_i
+      if epoch && !DataPoint.first(epoch: epoch)
+        db_record = DataPoint.create(
+          epoch: epoch,
+          cpu_usage_usr: row[1].to_f,
+          cpu_usage_sys: row[2].to_f,
+          cpu_usage_idl: row[3].to_f,
+          load: row[7].to_f,
+          net_bytes_in: row[10].to_f,
+          net_bytes_out: row[11].to_f,
+          net_packets_in: row[12].to_f,
+          net_packets_out: row[13].to_f,
+          temp: row[14].to_f
+        )
+      end
+    rescue ArgumentError, TypeError
+      next
+    end
+  end
+end
+
+begin
+  dstat_output = '/tmp/dstat.csv'
+  dstat_command_line = "/usr/bin/dstat --epoch --cpu -C total --load --net -N eth0 --net-packets --thermal --output #{dstat_output}"
+
+  logger.info 'spawning dstat process'
+  pid = spawn(dstat_command_line, STDOUT => ARGV.include?('-q') ? $stdout : '/dev/null')
+  Process.detach pid
+
+  n = 0; File.open(dstat_output, File::CREAT) do |file|
+    file.seek(0, IO::SEEK_END)
+    queue = INotify::Notifier.new
+    queue.watch(dstat_output, :modify) do
+      n += 1
+      unless (line = file.read).blank?
+        logger.info "#{n} #{line.strip}"
+        import_into_database line
+        one_minute  = 60 * 1
+        ten_minutes = 60 * 10
+        one_day     = 60 * 60 * 24
+        case
+          when n % one_day == 0 then
+            logger.info 'emptying dstat output file'
+            Process.kill('SIGSTOP', pid)
+            File.truncate(dstat_output, 0)
+            Process.kill('SIGCONT', pid)
+            n = 0
+          when n % ten_minutes == 0 then
+            Thread.new {aggregate_datapoints; write_graph_today}.join
+          when n % one_minute == 0 then
+            write_graph_recent
+        end
+      end
+    end
+    queue.run
+  end
+rescue SystemExit, Interrupt
+  logger.info 'wrapping it up'
+  Process.kill('SIGINT', pid)
+  File.delete(dstat_output)
+  exit
+end
