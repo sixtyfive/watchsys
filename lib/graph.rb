@@ -5,7 +5,7 @@ $resolution = '1024x600'
 
 def write_graph_recent
   t = 10 # minutes
-  logger.info "writing graph for the past #{t} minutes..."
+  logger.info "writing graph for the past #{t} minutes"
 
   g = Gruff::Area.new($resolution)
   g.title = 'Die letzten paar Minuten'
@@ -43,7 +43,7 @@ def write_graph_recent
 end
 
 def write_graph_today
-  logger.info "writing graph for today..."
+  logger.info "writing graph for today"
 
   g = Gruff::Area.new($resolution)
   g.title = 'Seit heute morgen um drei'

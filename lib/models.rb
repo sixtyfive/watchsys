@@ -1,5 +1,5 @@
 require 'sequel'
-require 'logger'
+require_relative 'logger'
 
 DB = Sequel.connect('sqlite://sysinfo.sqlite3', logger: logger || nil)
 DB.sql_log_level = :debug

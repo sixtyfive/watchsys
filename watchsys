@@ -2,14 +2,8 @@
 
 require 'rb-inotify'
 require 'csv'
-require 'logger'
 
-def logger
-  @logger ||= Logger.new($stdout)
-  @logger.level = ARGV.include?('-v') ? Logger::DEBUG : Logger::INFO
-  ARGV.include?('-q') ? Logger.new('/dev/null') : @logger
-end
-
+require_relative 'lib/logger'
 require_relative 'lib/string'
 require_relative 'lib/models'
 require_relative 'lib/aggregate'
