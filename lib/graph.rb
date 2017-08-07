@@ -81,6 +81,10 @@ def write_graph_today
     end
   end
   
+  labels = {}
+  (records[:cpu].count).times {|i| labels[i * 60] = i}
+  g.labels = labels
+
   records.each {|name, data_points|
     g.data name, data_points
   }
