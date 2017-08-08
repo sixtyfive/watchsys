@@ -1,5 +1,8 @@
 #!/usr/bin/env ruby
 
+home_sweet_home = File.dirname(File.symlink?(__FILE__) ? File.readlink(__FILE__) : __FILE__)
+Dir.chdir home_sweet_home
+
 require 'rb-inotify'
 require 'csv'
 
