@@ -36,6 +36,10 @@ def import_into_database(single_row = '')
   end
 end
 
+if `ps aux | grep dsta[t]` != ''
+  puts 'Please make sure there are no `dstat\' processes left running before starting `watchsys\'!'; exit
+end
+
 begin
   dstat_output = '/tmp/dstat.csv'
   dstat_command_line = "/usr/bin/dstat --epoch --cpu -C total --load --net -N eth0 --net-packets --thermal --output #{dstat_output}"
@@ -50,7 +54,7 @@ begin
     queue.watch(dstat_output, :modify) do
       n += 1
       unless (line = file.read).blank?
-        logger.info "#{n} #{line.strip}"
+        # logger.info "#{n} #{line.strip}"
         import_into_database line
         one_minute  = 60 * 1
         ten_minutes = 60 * 10

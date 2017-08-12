@@ -7,7 +7,6 @@ def t(str); str; end # TODO: i18n!
 
 def write_graph_recent
   t = 15 # minutes
-  logger.info "writing graph for the past #{t} minutes"
 
   g = Gruff::Area.new($resolution)
   g.title = t("Die letzten #{t} Minuten")
@@ -23,6 +22,8 @@ def write_graph_recent
                              Sequel.+(:net_packets_in, :net_packets_out).as(:pps),
                              Sequel.+(:net_bytes_in, :net_bytes_out).as(:bps))
                      .where(epoch: t1..t2)
+  max_r_count = t*60
+  logger.info "writing graph for the past #{t} minutes (#{records.count} data points, should be #{max_r_count})"
 
   records = records.each_with_object({temp: [], cpu: [], kbps: [], pps: []}) {|data, acc|
     acc[:temp] << data[:temp]*2   # to bring up into a range that looks like within 100
@@ -32,7 +33,6 @@ def write_graph_recent
   }
 
   labels = {}
-  max_r_count = t*60
   (max_r_count+1).times {|i|
     x = (i%60==0 ? (i == max_r_count ? i-1 : i) : -1)
     m = i/60-t
@@ -66,8 +66,6 @@ def write_graph_today
   t1 = Time.new(tc.year, tc.month, day, 3)
   t2 = Time.new(tc.year, tc.month, day+1, 3)
 
-  logger.info "writing graph for today (#{t1} - #{t2})"
-
   records = Minute.select(:temp, 
                           Sequel.+(:cpu_usage_usr, :cpu_usage_sys).as(:cpu), 
                           Sequel.+(:net_packets_in, :net_packets_out).as(:pps),
@@ -75,6 +73,7 @@ def write_graph_today
                   .where(min: t1..t2)
   r_count = records.count
   max_r_count = t*60
+  logger.info "writing graph for today (#{t1} - #{t2}, #{records.count} data points, should be #{max_r_count})"
 
   records = records.each_with_object({temp: [], cpu: [], kbps: [], pps: []}) {|data, acc|
     acc[:temp] << data[:temp]*2   # to bring up into a range that looks like within 100

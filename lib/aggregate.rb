@@ -22,25 +22,25 @@ end
 def aggregate_datapoints
   tc = Time.now
   begin
+    DataPoint.where(Sequel.lit "epoch < #{60*60*24}").destroy # haven't yet been able to figure out how these even get into the database
     t1 = Time.at(DataPoint.first.epoch)
-    exit if t1 < tc-10*365*24*60*60 # no idea what's going on there, so skipping if t1 came out older than 10 years
     logger.info "starting to aggregate (tc=#{tc})"
     loop do
       t2 = Time.new(t1.year, t1.month, t1.day+1, 3, 0)
       records = DataPoint.where(epoch: t1.to_i...t2.to_i)
-      logger.info "from #{t1} to #{t2}: aggregating #{records.count} records"
+      logger.info "from #{t1} to #{t2}: #{records.count} records"
       day = Time.new(t1.year, t1.month, t1.day)
       today = Time.new(tc.year, tc.month, tc.day)
       save_minutes(day, records.to_a)
       if day < today
-        logger.warn "deleting records for #{day}"
+        logger.info "deleting records for #{day}"
         records.delete
       end
       t1 = t2
       break if !DataPoint.last || t1.to_i > DataPoint.last.epoch # don't keep going beyond the end of the data
     end
   rescue Exception => e
-    logger.warn "no datapoints to aggregate (#{e})"
+    logger.warn "error: no datapoints to aggregate (#{e})"
   end
 end
 
