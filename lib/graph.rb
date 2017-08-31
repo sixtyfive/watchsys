@@ -1,5 +1,6 @@
 require 'gruff'
 require_relative 'models'
+require 'active_support/core_ext/numeric/time'
 
 $resolution = '1024x600'
 
@@ -64,7 +65,7 @@ def write_graph_today
     day = tc.day
   end
   t1 = Time.new(tc.year, tc.month, day, 3)
-  t2 = Time.new(tc.year, tc.month, day+1, 3)
+  t2 = Time.new(tc.year, tc.month, day, 3)+1.day
 
   records = Minute.select(:temp, 
                           Sequel.+(:cpu_usage_usr, :cpu_usage_sys).as(:cpu), 

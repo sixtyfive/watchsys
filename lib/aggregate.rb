@@ -1,4 +1,5 @@
 require_relative 'models'
+require 'active_support/core_ext/numeric/time'
 
 def save_minutes(day, records)
   i = 0
@@ -26,7 +27,7 @@ def aggregate_datapoints
     t1 = Time.at(DataPoint.first.epoch)
     logger.info "starting to aggregate (tc=#{tc})"
     loop do
-      t2 = Time.new(t1.year, t1.month, t1.day+1, 3, 0)
+      t2 = Time.new(t1.year, t1.month, t1.day, 3, 0)+1.day
       records = DataPoint.where(epoch: t1.to_i...t2.to_i)
       logger.info "from #{t1} to #{t2}: #{records.count} records"
       day = Time.new(t1.year, t1.month, t1.day)
